@@ -127,6 +127,9 @@ hyprctl eval 'pocket.toggle()'
 - **Command bar.** It comes from `pocket.tmux.conf` next to `pocket.lua`. The
   tmux server is separate (`tmux -L pocket`), so your own tmux sessions and
   config are untouched.
+- **Scrollback.** Each tab keeps 10,000 lines of scrollback (tmux
+  `history-limit`), enough for a long log tail without the memory growing
+  for days. Change it in `pocket.tmux.conf`.
 - **Tab titles.** Each tab shows the running command and folder
   (`zsh · projects`), so tabs can be told apart.
 - **Tab bar.** The bar is solid, not see-through. The active tab uses the
@@ -183,8 +186,9 @@ entry point, but all the work happens in Hyprland.
   window goes back to its tile and the tabs park. Summoned again, they come
   back as separate floating windows.
 - Grid restoring is tested with the dwindle layout, Omarchy's default.
-- While a grid window is out, its placeholder is a small terminal holding the
-  tile, and it uses a little memory.
+- The placeholder is a terminal (about 25 MB). It stays parked while a grid
+  window is your pocket, so round trips are instant, and closes when the
+  pocket no longer holds a grid window.
 - The pocket opens on the focused monitor, sized to it.
 - If the placeholder is closed while its window is out, the window can't
   return to its exact tile. It tiles back into its home workspace wherever

@@ -85,11 +85,24 @@ hl.on("window.open", function(w)
   end
 end)
 
--- A homed window closed while out: its placeholder has nothing left to hold.
+-- Home workspace of each lifted window, for when there is no placeholder to
+-- swap with (closed by hand, or not open yet right after SUPER + SHIFT + M).
+-- ponytail: kept in memory only, so a config reload forgets it and such a
+-- window then hides like a terminal until it is pocketed again.
+local home_ws = {}
+
+-- A window closed. With no homed window left, the placeholder has nothing to
+-- hold (about 25 MB for its terminal); and a closed window needs no home. The
+-- destroyed window's address is already gone here, so both are rechecked.
 hl.on("window.destroy", function()
   local ph = slot()
   if ph and not find(function(w) return is_homed(w) and w.address ~= ph.address end) then
     hl.dispatch(hl.dsp.window.close({ window = sel(ph) }))
+  end
+  for addr in pairs(home_ws) do
+    if not find(function(w) return w.address == addr end) then
+      home_ws[addr] = nil
+    end
   end
 end)
 
@@ -103,12 +116,6 @@ local function unfullscreen(w)
     hl.dispatch(hl.dsp.window.fullscreen({ mode = "maximized", action = "unset", window = sel(w) }))
   end
 end
-
--- Home workspace of each lifted window, for when there is no placeholder to
--- swap with (closed by hand, or not open yet right after SUPER + SHIFT + M).
--- ponytail: kept in memory only, so a config reload forgets it and such a
--- window then hides like a terminal until it is pocketed again.
-local home_ws = {}
 
 local function lift(w)
   local back = here()
@@ -261,11 +268,14 @@ function M.adopt()
   end
 
   hl.dispatch(hl.dsp.window.tag({ window = sel(active), tag = "+pocket" }))
+  local ph = slot()
   if not active.floating then
     hl.dispatch(hl.dsp.window.tag({ window = sel(active), tag = "+pocket-home" }))
-    if not slot() then
+    if not ph then
       hl.dispatch(hl.dsp.exec_cmd(M.slot))
     end
+  elseif ph then
+    hl.dispatch(hl.dsp.window.close({ window = sel(ph) })) -- no tile to hold now
   end
   hl.dispatch(hl.dsp.focus({ window = sel(active) }))
 end
