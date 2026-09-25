@@ -91,7 +91,9 @@ is ever lost on a hidden workspace.
 Close a pocket terminal the usual way (`exit`, or `SUPER + W`). The next
 `SUPER + M` opens a fresh one. Closing a tab ends its tmux session, so nothing
 keeps running behind your back. If you close a grid window while it's out of
-its grid, its placeholder closes too and the grid closes the gap.
+its grid, its placeholder closes too and the grid closes the gap. Don't close
+the placeholder itself: while it holds the tile, the window can go back to
+exactly that spot.
 
 ## Changing the keys
 
@@ -128,9 +130,10 @@ hyprctl eval 'pocket.toggle()'
 - **Tab titles.** Each tab shows the running command and folder
   (`zsh · projects`), so tabs can be told apart.
 - **Tab bar.** The bar is solid, not see-through. The active tab uses the
-  theme's accent color, other tabs its background. The colors are read from
-  the current Omarchy theme when Hyprland loads its config. They apply to every
-  Hyprland group, not just the pocket.
+  theme's accent color, other tabs its background. The colors come from the
+  current Omarchy theme and follow it when you switch themes (`omarchy theme
+  set` reloads Hyprland). They apply to every Hyprland group, not just the
+  pocket.
 
 ## Uninstall
 
@@ -183,8 +186,11 @@ entry point, but all the work happens in Hyprland.
 - While a grid window is out, its placeholder is a small terminal holding the
   tile, and it uses a little memory.
 - The pocket opens on the focused monitor, sized to it.
-- Tab bar colors follow a theme change the next time Hyprland reloads its
-  config. Run `hyprctl reload` to update them at once.
+- If the placeholder is closed while its window is out, the window can't
+  return to its exact tile. It tiles back into its home workspace wherever
+  the layout puts it, and the next round trip is exact again. After a
+  Hyprland config reload (every save of your config) Pocket no longer knows
+  such a window's home, and it hides like a terminal until you pocket it again.
 
 ## Troubleshooting
 

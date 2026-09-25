@@ -104,10 +104,22 @@ local function unfullscreen(w)
   end
 end
 
+-- Home workspace of each lifted window, for when there is no placeholder to
+-- swap with (closed by hand, or not open yet right after SUPER + SHIFT + M).
+-- ponytail: kept in memory only, so a config reload forgets it and such a
+-- window then hides like a terminal until it is pocketed again.
+local home_ws = {}
+
 local function lift(w)
   local back = here()
   local ph = slot()
   unfullscreen(w)
+  if not w.floating then
+    home_ws[w.address] = w.workspace.name
+    if not ph then
+      hl.dispatch(hl.dsp.exec_cmd(M.slot)) -- ready for the next round trip
+    end
+  end
 
   if not w.floating and ph then
     hl.dispatch(hl.dsp.focus({ window = sel(w) }))
@@ -130,13 +142,19 @@ end
 -- The same dance backwards: the window tiles in beside the placeholder, they
 -- swap, and the placeholder leaves from the tile the window just vacated.
 -- Everything runs in one Lua call, so the detour through the home workspace
--- is never drawn. Without a placeholder in a grid there is no tile to return
--- to, and it hides like any other pocket window.
+-- is never drawn. Without a placeholder in the grid there is no exact tile to
+-- return to: it tiles back into its home workspace wherever dwindle puts it,
+-- or, with no home known, hides like any other pocket window.
 local function send_home(w)
   local back = here()
   local ph = slot()
   if not ph or ph.floating or not ph.workspace or ph.workspace.name:match("^special:") then
-    hl.dispatch(hl.dsp.window.move({ workspace = HIDDEN, follow = false, window = sel(w) }))
+    local ws = home_ws[w.address]
+    hl.dispatch(hl.dsp.window.move({ workspace = ws or HIDDEN, follow = false, window = sel(w) }))
+    if ws then
+      unfullscreen(w)
+      hl.dispatch(hl.dsp.window.float({ action = "off", window = sel(w) }))
+    end
     return
   end
 
@@ -149,7 +167,7 @@ local function send_home(w)
   hl.dispatch(hl.dsp.window.float({ action = "off", window = sel(w) }))
   hl.dispatch(hl.dsp.window.swap({ window = sel(w), target = sel(ph) }))
   hl.dispatch(hl.dsp.window.move({ workspace = SLOT_PARK, follow = false, window = sel(ph) }))
-  if back ~= w.workspace.name then
+  if back ~= ph.workspace.name then
     hl.dispatch(hl.dsp.focus({ workspace = back }))
   end
 end
@@ -179,27 +197,28 @@ function M.show()
   return wins[1]
 end
 
--- Homed windows go back to their tile, the rest parks on the hidden workspace.
+-- Homed windows go back to their tile, the rest parks on the hidden workspace
+-- (a tab group moves as one; a tab dragged out of it moves on its own).
 -- Homes first: they leave the tab group before the group is parked.
 function M.hide()
-  local rest
-  for _, w in ipairs(M.windows()) do
-    if is_homed(w) then
-      if not at_home(w) then
-        send_home(w)
-      end
-    else
-      rest = rest or w
+  local wins = M.windows()
+  for _, w in ipairs(wins) do
+    if is_homed(w) and not at_home(w) then
+      send_home(w)
     end
   end
-  if rest then
-    hl.dispatch(hl.dsp.window.move({ workspace = HIDDEN, follow = false, window = sel(rest) }))
+  for _, w in ipairs(wins) do
+    if not is_homed(w) then
+      hl.dispatch(hl.dsp.window.move({ workspace = HIDDEN, follow = false, window = sel(w) }))
+    end
   end
 end
 
+-- Open means focused and on this workspace: after a hide Hyprland can still
+-- report the parked window as active, and that must not read as open.
 function M.toggle()
   local active = hl.get_active_window()
-  if active and is_pocket(active) and not at_home(active) then
+  if active and is_pocket(active) and not at_home(active) and active.workspace and active.workspace.name == here() then
     M.hide()
   elseif not M.show() then
     hl.dispatch(hl.dsp.exec_cmd(M.terminal))
