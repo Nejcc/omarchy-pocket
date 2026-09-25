@@ -5,6 +5,8 @@ your pocket drops in, floating and centered. Press it again and it's gone,
 still running in the background. No more opening a fresh terminal every time
 you need to run one command.
 
+![A pocket with two tabs floating over a tiling grid: the tab bar on top, the Pocket shortcuts along the bottom, and the pocketed window's tile held by a "In the pocket" placeholder](preview.png)
+
 A pocket can be a terminal (the default), or any window you put in it: a
 browser, your notes, a chat. Take a window out of your tiling grid and the
 grid stays exactly as it was. When you put the pocket away, the window goes

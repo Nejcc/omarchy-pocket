@@ -22,9 +22,21 @@ local SLOT_PARK = "special:pocket-slot"
 local DIR = debug.getinfo(1, "S").source:match("^@(.*)/") or "."
 M.terminal = "xdg-terminal-exec --app-id=pocket -e tmux -L pocket -f " .. DIR .. "/pocket.tmux.conf new-session"
 
--- The placeholder: a bare terminal that says where its window went.
-M.slot = "[workspace " .. SLOT_PARK .. " silent] xdg-terminal-exec --app-id=pocket-slot -e sh -c "
-  .. "'printf \"\\n   \\360\\237\\223\\214  In the pocket. Super+M brings it back here.\\n\"; exec sleep infinity'"
+-- The placeholder: a bare terminal that says where its window went. The
+-- message is redrawn, centered, on every resize: the terminal clears it when
+-- the placeholder is resized into a tile.
+local SLOT_SCRIPT = [[
+msg='In the pocket.  Super+M brings it back here.'
+show() {
+  set -- $(stty size 2>/dev/null || echo "24 80")
+  printf '\033[2J\033[?25l\033[%d;%dH\360\237\223\214  %s' $(($1 / 2)) $((($2 - ${#msg} - 4) / 2 + 1)) "$msg"
+}
+trap show WINCH
+show
+while :; do sleep 86400 & wait $!; done
+]]
+M.slot = "[workspace " .. SLOT_PARK .. " silent] xdg-terminal-exec --app-id=pocket-slot -e sh -c '"
+  .. SLOT_SCRIPT:gsub("'", "'\\''") .. "'"
 
 o.window("pocket", { float = true, center = true, size = { "(monitor_w*0.6)", "(monitor_h*0.6)" } })
 
