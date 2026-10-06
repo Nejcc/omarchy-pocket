@@ -153,10 +153,13 @@ terminal still open stays open as a normal window. Close it when you're done.
 ## Tests
 
 ```sh
+python tests/stress-guards.py  # guard checks; does not touch the desktop
 tests/stress.sh   # live stress test (takes over workspaces 8 and 9 for about a minute)
 ```
 
-The stress test opens four terminals in a tiling grid, pockets each one in
+The stress test requires an empty pocket and empty workspaces 8 and 9; it
+skips before changing anything if either is in use. It opens four terminals
+in a tiling grid, pockets each one in
 turn, and shows and hides it three times from another workspace. After every
 round trip it checks that every window in the grid is back to the pixel. Then
 it toggles 40 times with no pause, and checks tabs: hiding a pocketed grid

@@ -6,7 +6,10 @@
 # shows/hides it from 8, checking after every round trip that the whole grid is
 # back pixel for pixel. Then 40 toggles with no pause, and tabs. Whatever was
 # in your pocket before is released onto workspace 8 (pocketing a window
-# replaces the pocket). Test windows are closed at the end.
+# replaces the pocket). The test skips if there is already a pocket or either
+# workspace is occupied. Test windows are closed at the end.
+
+set -o pipefail
 
 ev() { hyprctl repl "$1" >/dev/null; }
 disp() { hyprctl dispatch "$1" >/dev/null; }
@@ -15,6 +18,16 @@ fail=0
 ok=0
 
 [[ $(hyprctl repl 'return type(pocket)') == table ]] || { echo "pocket.lua is not loaded"; exit 1; }
+
+# Adopt replaces the current pocket; check before switching or adopting.
+[[ $(hyprctl repl 'return #pocket.windows()') == 0 ]] || {
+  echo "SKIP: release the current pocket before running this test"
+  exit 0
+}
+if ! hyprctl clients -j | jq -e '[.[] | select(.workspace.id == 8 or .workspace.id == 9)] | length == 0' >/dev/null; then
+  echo "SKIP: workspaces 8 and 9 must be empty (or the workspace query failed)"
+  exit 0
+fi
 
 disp 'hl.dsp.focus({ workspace = "9" })'
 for i in 1 2 3 4; do disp 'hl.dsp.exec_cmd("xdg-terminal-exec --app-id=pockettest")'; sleep 0.7; done
