@@ -147,13 +147,14 @@ omarchy plugin remove nejcc.pocket
 ```
 
 Then delete the `dofile` line (and any rebinds) from
-`~/.config/hypr/bindings.lua`. Pocket keeps no settings files. A pocket
-terminal still open stays open as a normal window. Close it when you're done.
+`~/.config/hypr/bindings.lua`. Pocket keeps no settings files; adopted windows
+carry their home workspace in a window tag. A pocket terminal still open stays
+open as a normal window. Close it when you're done.
 
 ## Tests
 
 ```sh
-python tests/stress-guards.py  # guard checks; does not touch the desktop
+python tests/check.py  # offline manifest, syntax, reload, and guard checks
 tests/stress.sh   # live stress test (takes over workspaces 8 and 9 for about a minute)
 ```
 
@@ -197,9 +198,9 @@ entry point, but all the work happens in Hyprland.
 - The pocket opens on the focused monitor, sized to it.
 - If the placeholder is closed while its window is out, the window can't
   return to its exact tile. It tiles back into its home workspace wherever
-  the layout puts it, and the next round trip is exact again. After a
-  Hyprland config reload (every save of your config) Pocket no longer knows
-  such a window's home, and it hides like a terminal until you pocket it again.
+  the layout puts it, and the next round trip is exact again. The home workspace
+  is stored in a window tag, so it survives Hyprland config reloads. Replacing
+  the pocket removes that tag from the released window.
 
 ## Troubleshooting
 
@@ -212,6 +213,21 @@ hyprctl repl 'return type(pocket)'   # prints "table" when loaded
 The `pcall` around `dofile` keeps a missing or broken plugin from breaking your
 Hyprland config. If it doesn't say `table`, check the path in `bindings.lua`
 and run `hyprctl configerrors`.
+
+## Optional per-monitor integration
+
+Pocket works independently. With the proposed version 1 integration API in
+[per-monitor workspaces](https://github.com/Nejcc/omarchy-per-monitor-workspaces),
+it can also keep an adopted window's saved home attached to its workspace when
+the provider relocates or swaps workspaces. Load per-monitor before Pocket to
+connect automatically. If Pocket loads first, add this after both loaders:
+
+```lua
+if pocket and pocket.connect_workspaces then pocket.connect_workspaces() end
+```
+
+The call is safe with no provider or an older provider. Connections are recreated
+on config reload. This integration needs no changes to Pocket's normal shortcuts.
 
 ## See also
 

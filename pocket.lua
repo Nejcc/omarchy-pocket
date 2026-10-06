@@ -97,24 +97,50 @@ hl.on("window.open", function(w)
   end
 end)
 
--- Home workspace of each lifted window, for when there is no placeholder to
--- swap with (closed by hand, or not open yet right after SUPER + SHIFT + M).
--- ponytail: kept in memory only, so a config reload forgets it and such a
--- window then hides like a terminal until it is pocketed again.
-local home_ws = {}
+-- Keep the home on the window itself: Lua state is replaced on config reload,
+-- but window tags survive. Hex keeps monitor/workspace names safe in tags.
+local HOME_TAG = "pocket-home-ws-"
+
+local function forget_home(w)
+  local tags = type(w.tags) == "table" and w.tags or { w.tags }
+  for _, tag in ipairs(tags) do
+    if tag and tag:sub(1, #HOME_TAG) == HOME_TAG then
+      hl.dispatch(hl.dsp.window.tag({ window = sel(w), tag = "-" .. tag:gsub("%*$", "") }))
+    end
+  end
+end
+
+local function remember_home(w, name)
+  forget_home(w)
+  local encoded = (name or w.workspace.name):gsub(".", function(c) return string.format("%02x", c:byte()) end)
+  hl.dispatch(hl.dsp.window.tag({ window = sel(w), tag = "+" .. HOME_TAG .. encoded }))
+end
+
+local function home_workspace(w)
+  local tags = type(w.tags) == "table" and w.tags or { w.tags }
+  for _, tag in ipairs(tags) do
+    local encoded = tag and tag:sub(1, #HOME_TAG) == HOME_TAG
+      and tag:sub(#HOME_TAG + 1):match("^([%x]+)%*?$")
+    if encoded and #encoded % 2 == 0 then
+      return (encoded:gsub("..", function(pair) return string.char(tonumber(pair, 16)) end))
+    end
+  end
+end
+
+-- Optional adapter; call after both plugins load when Pocket is loaded first.
+function M.connect_workspaces()
+  local provider = per_monitor_workspaces
+  return dofile(DIR .. "/integrations/per-monitor.lua")(
+    provider and provider.integration, M.windows, home_workspace, remember_home)
+end
 
 -- A window closed. With no homed window left, the placeholder has nothing to
--- hold (about 25 MB for its terminal); and a closed window needs no home. The
--- destroyed window's address is already gone here, so both are rechecked.
+-- hold (about 25 MB for its terminal). The destroyed window's address is
+-- already gone here, so the remaining windows are rechecked.
 hl.on("window.destroy", function()
   local ph = slot()
   if ph and not find(function(w) return is_homed(w) and w.address ~= ph.address end) then
     hl.dispatch(hl.dsp.window.close({ window = sel(ph) }))
-  end
-  for addr in pairs(home_ws) do
-    if not find(function(w) return w.address == addr end) then
-      home_ws[addr] = nil
-    end
   end
 end)
 
@@ -134,7 +160,7 @@ local function lift(w)
   local ph = slot()
   unfullscreen(w)
   if not w.floating then
-    home_ws[w.address] = w.workspace.name
+    remember_home(w)
     if not ph then
       hl.dispatch(hl.dsp.exec_cmd(M.slot)) -- ready for the next round trip
     end
@@ -168,7 +194,7 @@ local function send_home(w)
   local back = here()
   local ph = slot()
   if not ph or ph.floating or not ph.workspace or ph.workspace.name:match("^special:") then
-    local ws = home_ws[w.address]
+    local ws = home_workspace(w)
     hl.dispatch(hl.dsp.window.move({ workspace = ws or HIDDEN, follow = false, window = sel(w) }))
     if ws then
       unfullscreen(w)
@@ -271,6 +297,7 @@ function M.adopt()
 
   M.hide()
   for _, w in ipairs(M.windows()) do
+    forget_home(w)
     for _, tag in ipairs({ "-pocket", "-pocket*", "-pocket-home" }) do
       hl.dispatch(hl.dsp.window.tag({ window = sel(w), tag = tag }))
     end
@@ -282,6 +309,7 @@ function M.adopt()
   hl.dispatch(hl.dsp.window.tag({ window = sel(active), tag = "+pocket" }))
   local ph = slot()
   if not active.floating then
+    remember_home(active)
     hl.dispatch(hl.dsp.window.tag({ window = sel(active), tag = "+pocket-home" }))
     if not ph then
       hl.dispatch(hl.dsp.exec_cmd(M.slot))
@@ -329,4 +357,5 @@ do
 end
 
 pocket = M
+M.connect_workspaces()
 return M
