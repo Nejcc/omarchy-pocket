@@ -214,6 +214,21 @@ The `pcall` around `dofile` keeps a missing or broken plugin from breaking your
 Hyprland config. If it doesn't say `table`, check the path in `bindings.lua`
 and run `hyprctl configerrors`.
 
+## Optional per-monitor integration
+
+Pocket works independently. With the proposed version 1 integration API in
+[per-monitor workspaces](https://github.com/Nejcc/omarchy-per-monitor-workspaces),
+it can also keep an adopted window's saved home attached to its workspace when
+the provider relocates or swaps workspaces. Load per-monitor before Pocket to
+connect automatically. If Pocket loads first, add this after both loaders:
+
+```lua
+if pocket and pocket.connect_workspaces then pocket.connect_workspaces() end
+```
+
+The call is safe with no provider or an older provider. Connections are recreated
+on config reload. This integration needs no changes to Pocket's normal shortcuts.
+
 ## See also
 
 - [Omarchy motions](https://github.com/Nejcc/omarchy-motions): jump to, move

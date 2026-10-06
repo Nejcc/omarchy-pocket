@@ -15,6 +15,7 @@ assert set(manifest['entryPoints']) == {'service'}
 assert (root / manifest['entryPoints']['service']).is_file()
 for command in [
     ['luac', '-p', 'pocket.lua'],
+    ['luac', '-p', 'integrations/per-monitor.lua'],
     ['luac', '-p', 'tests/pocket.test.lua'],
     ['bash', '-n', 'tests/stress.sh'],
     ['lua', 'tests/pocket.test.lua'],

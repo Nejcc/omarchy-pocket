@@ -110,9 +110,9 @@ local function forget_home(w)
   end
 end
 
-local function remember_home(w)
+local function remember_home(w, name)
   forget_home(w)
-  local encoded = w.workspace.name:gsub(".", function(c) return string.format("%02x", c:byte()) end)
+  local encoded = (name or w.workspace.name):gsub(".", function(c) return string.format("%02x", c:byte()) end)
   hl.dispatch(hl.dsp.window.tag({ window = sel(w), tag = "+" .. HOME_TAG .. encoded }))
 end
 
@@ -125,6 +125,13 @@ local function home_workspace(w)
       return (encoded:gsub("..", function(pair) return string.char(tonumber(pair, 16)) end))
     end
   end
+end
+
+-- Optional adapter; call after both plugins load when Pocket is loaded first.
+function M.connect_workspaces()
+  local provider = per_monitor_workspaces
+  return dofile(DIR .. "/integrations/per-monitor.lua")(
+    provider and provider.integration, M.windows, home_workspace, remember_home)
 end
 
 -- A window closed. With no homed window left, the placeholder has nothing to
@@ -350,4 +357,5 @@ do
 end
 
 pocket = M
+M.connect_workspaces()
 return M

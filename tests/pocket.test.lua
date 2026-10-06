@@ -3,7 +3,7 @@
 local source = arg[1] or "pocket.lua"
 local passed = 0
 
-local function fixture(home)
+local function fixture(home, provider)
   local window = { address = "0xa", class = "foot", pid = 123, tags = {},
     floating = false, fullscreen = 0, workspace = { name = home or "1" } }
   local state = { windows = { window }, active = window, workspace = "2", events = {}, calls = {} }
@@ -18,6 +18,8 @@ local function fixture(home)
   local function load()
     -- A fresh environment models Hyprland replacing its Lua state on reload.
     local env = setmetatable({ io = { open = function() return nil end } }, { __index = _G })
+    env.per_monitor_workspaces = provider
+    env.dofile = function(path) return assert(loadfile(path, "t", env))() end
     env.o = { window = function() end, bind = function() end }
     env.hl = {
       get_windows = function() return state.windows end,
@@ -133,6 +135,45 @@ check("native terminal pockets still park on their hidden workspace", function()
   w.class, w.tags, w.floating = "pocket", { "pocket" }, true
   load().hide()
   assert(w.workspace.name == "special:pocket" and w.floating)
+end)
+
+check("optional per-monitor adapter follows home through a swap and reload", function()
+  local callback, registrations = nil, 0
+  local provider = { integration = { version = 1, register = function(id, module)
+    assert(id == "nejcc.pocket")
+    callback = module.workspaces_remapped
+    registrations = registrations + 1
+  end } }
+  local w, _, load = fixture("Left:1", provider)
+  local pocket = load()
+  pocket.adopt(); pocket.show()
+  callback({ ["Left:1"] = "Right:1", ["Right:1"] = "Left:1" })
+  pocket = load()
+  pocket.hide()
+  assert(w.workspace.name == "Right:1" and registrations == 2)
+end)
+
+check("absent or older provider keeps Pocket standalone", function()
+  for _, provider in ipairs({ {}, { integration = { version = 99 } } }) do
+    local w, _, load = fixture("1", provider)
+    local pocket = load()
+    assert(pocket.connect_workspaces() == false)
+    pocket.adopt(); pocket.show(); pocket.hide()
+    assert(w.workspace.name == "1")
+  end
+end)
+
+check("explicit connection works when Pocket loads before the provider", function()
+  local provider = {}
+  local w, _, load = fixture("Left:1", provider)
+  local pocket = load()
+  pocket.adopt(); pocket.show()
+  local callback
+  provider.integration = { version = 1, register = function(_, module) callback = module.workspaces_remapped end }
+  assert(pocket.connect_workspaces())
+  callback({ ["Left:1"] = "Right:4" })
+  pocket.hide()
+  assert(w.workspace.name == "Right:4")
 end)
 
 print(passed .. " Pocket regression checks passed.")
