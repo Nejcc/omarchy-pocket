@@ -239,3 +239,10 @@ on config reload. This integration needs no changes to Pocket's normal shortcuts
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## Releases
+
+After merging the prepared changes, run `scripts/release.sh` from a clean
+checkout. It checks the merged tree, runs offline tests, creates the manifest
+version tag and a GitHub release from `CHANGELOG.md`, then closes the release
+tracking issue. Git SSH access and an authenticated `gh` are required.
