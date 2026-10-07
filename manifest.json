@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "nejcc.pocket",
   "name": "Pocket",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "author": "Nejcc",
   "license": "MIT",
   "description": "One window that goes wherever you go: SUPER + M brings a terminal (or any app you pocket) to the workspace you're on and hides it again, with tabs and your tiling grid left exactly as it was",

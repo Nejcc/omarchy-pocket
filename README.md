@@ -45,15 +45,13 @@ back into the same tile it came from.
 omarchy plugin add https://github.com/Nejcc/omarchy-pocket.git --enable
 ```
 
-Then load Pocket from `~/.config/hypr/bindings.lua`. Add this line at the end:
+That's the whole setup. The plugin's service loads `pocket.lua` into Hyprland
+(`hyprctl eval`) when the shell starts and again after every config reload, so
+the keys work right away. It never edits your configuration.
 
-```lua
--- Pocket: SUPER + M
-pcall(dofile, os.getenv("HOME") .. "/.config/omarchy/plugins/nejcc.pocket/pocket.lua")
-```
-
-Hyprland reloads when you save the file, and the keys work right away. The
-plugin never edits your configuration itself. This one line is the whole setup.
+Upgrading from 0.2? The `dofile` line in `~/.config/hypr/bindings.lua` is no
+longer needed. Keeping it is harmless: Pocket loads once either way. Keep it
+only if you change the keys (see below).
 
 `SUPER + SHIFT + M` opens Music in the default Omarchy bindings. Pocket takes
 that key over. See [Changing the keys](#changing-the-keys) to keep Music there.
@@ -101,7 +99,8 @@ exactly that spot.
 
 `pocket.lua` binds its three keys when it loads. Pocket also sets a global
 `pocket` table with `toggle`, `new_tab`, `adopt`, `show` and `hide`. To use
-other keys, rebind after the `dofile` line:
+other keys, load Pocket yourself in `~/.config/hypr/bindings.lua` and rebind
+after it. The service sees Pocket is already loaded and leaves your keys alone:
 
 ```lua
 pcall(dofile, os.getenv("HOME") .. "/.config/omarchy/plugins/nejcc.pocket/pocket.lua")
@@ -146,8 +145,9 @@ hyprctl eval 'pocket.toggle()'
 omarchy plugin remove nejcc.pocket
 ```
 
-Then delete the `dofile` line (and any rebinds) from
-`~/.config/hypr/bindings.lua`. Pocket keeps no settings files; adopted windows
+Pocket's keys stay bound until Hyprland next reloads its config (save any
+Hyprland config file, or run `hyprctl reload`). If you added a `dofile` line or
+rebinds to `~/.config/hypr/bindings.lua`, delete them. Pocket keeps no settings files; adopted windows
 carry their home workspace in a window tag. A pocket terminal still open stays
 open as a normal window. Close it when you're done.
 
@@ -210,9 +210,10 @@ If `SUPER + M` does nothing, check that Pocket is loaded:
 hyprctl repl 'return type(pocket)'   # prints "table" when loaded
 ```
 
-The `pcall` around `dofile` keeps a missing or broken plugin from breaking your
-Hyprland config. If it doesn't say `table`, check the path in `bindings.lua`
-and run `hyprctl configerrors`.
+If it doesn't say `table`, check that the plugin is enabled
+(`omarchy plugin list`), run `hyprctl reload` to make the service load it again,
+and look at `hyprctl configerrors`. If you load Pocket from `bindings.lua`
+yourself, check the path there.
 
 ## Optional per-monitor integration
 
